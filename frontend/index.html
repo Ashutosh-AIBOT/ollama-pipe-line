@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Advanced RAG AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070e;--card:#0d0d1a;--card2:#111122;
+  --b1:#1a1a2e;--b2:#252540;
+  --pu:#7c3aed;--pu2:#6d28d9;--puL:#a78bfa;
+  --cy:#06b6d4;--cyL:#67e8f9;
+  --gr:#4ade80;--re:#f87171;--ye:#fbbf24;--or:#fb923c;
+  --tx:#e2e8f0;--mu:#475569;--mu2:#334155;
+}
+body{background:var(--bg);color:var(--tx);font-family:'Syne',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.mono{font-family:'JetBrains Mono',monospace}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px}
+.card{background:var(--card);border:1px solid var(--b1);border-radius:12px}
+.card2{background:var(--card2);border:1px solid var(--b2);border-radius:8px}
+input,select,textarea{background:var(--card2);border:1px solid var(--b2);color:var(--tx);border-radius:8px;outline:none;font-family:'Syne',sans-serif;font-size:13px;transition:border-color .2s;padding:9px 13px;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--pu)}
+select option{background:var(--card)}
+.btn{border:none;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:9px 18px;transition:all .15s;white-space:nowrap}
+.bp{background:var(--pu);color:#fff}.bp:hover:not(:disabled){background:var(--pu2);transform:translateY(-1px)}.bp:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.bg2{background:transparent;color:var(--tx);border:1px solid var(--b2)}.bg2:hover{border-color:var(--pu);color:var(--puL)}
+.bsm{padding:4px 10px;font-size:11px}.bxs{padding:3px 8px;font-size:10px}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dg{background:var(--gr);box-shadow:0 0 5px var(--gr)}.dr{background:var(--re)}.dy{background:var(--ye);animation:blink 1s infinite}.dc{background:var(--cy);box-shadow:0 0 5px var(--cy)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tab{padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;color:var(--mu);transition:all .15s}
+.tab.on{background:var(--pu);color:#fff}.tab:hover:not(.on){color:var(--tx)}
+.msg-u{background:var(--pu);color:#fff;padding:11px 15px;border-radius:14px 14px 4px 14px;max-width:72%;margin-left:auto;line-height:1.6;font-size:13px;word-break:break-word}
+.msg-a{background:var(--card2);border:1px solid var(--b2);padding:11px 15px;border-radius:14px 14px 14px 4px;max-width:88%;line-height:1.7;font-size:13px;white-space:pre-wrap;word-break:break-word}
+.msg-t{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-family:'JetBrains Mono',monospace}
+.br{background:#0a1525;color:var(--cy);border:1px solid var(--cy)}
+.bd{background:#0a1a0a;color:var(--gr);border:1px solid var(--gr)}
+.bp2{background:#1a0a2e;color:var(--puL);border:1px solid var(--pu)}
+.rag-step{border-left:2px solid var(--b2);padding-left:12px;margin-left:6px;position:relative;padding-bottom:16px}
+.rag-step::before{content:'';position:absolute;left:-5px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--gr);box-shadow:0 0 6px var(--gr)}
+.dropzone{border:2px dashed var(--b2);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}
+.dropzone:hover,.dropzone.drag{border-color:var(--pu);background:rgba(124,58,237,.04)}
+.doc-card{cursor:pointer;transition:border-color .15s}
+.doc-card:hover{border-color:var(--pu)!important}
+.doc-card.sel{border-color:var(--cy)!important;background:rgba(6,182,212,.05)!important}
+.ml{display:grid;grid-template-columns:1fr 360px;gap:10px;flex:1;overflow:hidden;padding:0 10px 10px}
+.cc{display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.rc{display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.cb{overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+.ec{width:12px;height:12px;border-radius:2px;display:inline-block;margin:1px}
+.sbar{height:3px;border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body x-data="app()" x-init="init()">
+
+<!-- HEADER -->
+<header class="card mx-2 mt-2 mb-1 px-4 py-2 flex items-center gap-3" style="border-radius:10px;flex-shrink:0">
+  <div style="width:30px;height:30px;background:linear-gradient(135deg,var(--pu),var(--cy));border-radius:7px;display:grid;place-items:center;font-size:16px;flex-shrink:0">🧠</div>
+  <div>
+    <div style="font-size:14px;font-weight:800;letter-spacing:-.5px">Advanced RAG AI</div>
+    <div class="mono" style="font-size:9px;color:var(--mu)">Multi-step Rerank · ChromaDB · Per-Doc Collections</div>
+  </div>
+  <div class="flex items-center gap-3 ml-3">
+    <div class="flex items-center gap-1.5">
+      <span class="dot" :class="st.api==='ok'?'dg':'dr'"></span>
+      <span class="mono" style="font-size:10px" :style="st.api==='ok'?'color:var(--gr)':'color:var(--re)'" x-text="st.api==='ok'?'API OK':'API Down'"></span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="dot" :class="st.ollama==='ok'?'dg':'dr'"></span>
+      <span class="mono" style="font-size:10px" :style="st.ollama==='ok'?'color:var(--gr)':'color:var(--re)'" x-text="st.ollama==='ok'?'Ollama OK':'Ollama Down'"></span>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 ml-auto">
+    <span class="mono" style="font-size:10px;color:var(--mu)">API Key</span>
+    <input x-model="apiKey" type="password" placeholder="mypassword123" style="width:150px;font-size:11px;padding:5px 9px"/>
+    <button @click="checkHealth()" class="btn bg2 bsm">↻</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="ml">
+  <!-- LEFT -->
+  <div class="cc">
+    <!-- tabs -->
+    <div class="flex gap-1.5 items-center" style="flex-shrink:0">
+      <span class="tab" :class="tab==='chat'&&'on'" @click="tab='chat'">💬 Chat</span>
+      <span class="tab" :class="tab==='docs'&&'on'" @click="tab='docs'">📄 Documents</span>
+      <span class="tab" :class="tab==='viz'&&'on'" @click="tab='viz'">🔬 RAG Pipeline</span>
+      <div class="ml-auto flex gap-3 mono" style="font-size:10px;color:var(--mu)">
+        <span>Docs:<span style="color:var(--cy)" x-text="allDocs.length"></span></span>
+        <span>Chunks:<span style="color:var(--cy)" x-text="dbStats.total_chunks||0"></span></span>
+        <span x-show="selDocs.length" style="color:var(--puL)">Selected:<span x-text="selDocs.length"></span></span>
+      </div>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div x-show="tab==='chat'" class="card flex flex-col flex-1 overflow-hidden" style="padding:14px;gap:10px">
+      <div class="cb" id="cb">
+        <template x-if="msgs.length===0">
+          <div class="flex flex-col items-center justify-center h-full" style="color:var(--mu)">
+            <div style="font-size:44px;margin-bottom:10px">🤖</div>
+            <p style="font-size:13px;font-weight:700">Ask anything</p>
+            <p style="font-size:11px;margin-top:4px">Upload docs → select them → enable RAG</p>
+          </div>
+        </template>
+        <template x-for="m in msgs" :key="m.id">
+          <div>
+            <div x-show="m.r==='user'" class="flex justify-end"><div class="msg-u" x-text="m.t"></div></div>
+            <div x-show="m.r==='ai'">
+              <div class="msg-a" x-text="m.t"></div>
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
+                <span class="badge" :class="m.rag?'br':'bd'" x-text="m.rag?'🔍 RAG':'💡 Direct'"></span>
+                <span class="badge bp2 mono" x-text="m.model"></span>
+                <span class="mono" style="font-size:10px;color:var(--mu)" x-text="m.ms+'ms'"></span>
+                <span x-show="m.chunks>0" class="mono" style="font-size:10px;color:var(--cy)" x-text="'· '+m.chunks+' chunks/'+m.cands+' cands'"></span>
+                <div class="flex gap-1 ml-auto">
+                  <button @click="speak(m.t)" class="btn bg2 bxs">🔊</button>
+                  <button x-show="m.steps" @click="showViz(m)" class="btn bg2 bxs" style="color:var(--puL)">🔬 Pipeline</button>
+                </div>
+              </div>
+            </div>
+            <div x-show="m.r==='thinking'" class="msg-t"><span class="dot dy"></span><span x-text="m.t"></span></div>
+            <div x-show="m.r==='error'"><div class="msg-a" style="border-color:var(--re);color:var(--re)" x-text="m.t"></div></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- selected doc pills -->
+      <div x-show="selDocs.length" class="flex flex-wrap gap-1" style="flex-shrink:0">
+        <span style="font-size:10px;color:var(--mu);align-self:center">RAG:</span>
+        <template x-for="d in selDocNames()" :key="d.id">
+          <span class="badge br" style="cursor:pointer" @click="toggleDoc(d.id)">📄<span x-text="d.n"></span> ×</span>
+        </template>
+      </div>
+
+      <!-- controls -->
+      <div class="flex flex-col gap-2" style="flex-shrink:0">
+        <div class="flex gap-2 items-center flex-wrap">
+          <select x-model="model" style="flex:1;min-width:130px;font-size:11px;padding:6px 9px">
+            <template x-for="m in st.models" :key="m"><option :value="m" x-text="m"></option></template>
+          </select>
+          <label class="flex items-center gap-1.5 mono" style="font-size:11px;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" x-model="useRag" style="accent-color:var(--pu)"/>RAG
+          </label>
+          <div class="flex items-center gap-1 mono" style="font-size:11px;white-space:nowrap">
+            <span style="color:var(--mu)">Rerank</span>
+            <select x-model="rp" style="width:48px;font-size:11px;padding:4px 6px">
+              <option value="1">1x</option><option value="2">2x</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1 mono" style="font-size:11px;white-space:nowrap">
+            <span style="color:var(--mu)">Top</span>
+            <select x-model="tk" style="width:48px;font-size:11px;padding:4px 6px">
+              <option value="3">3</option><option value="5">5</option><option value="8">8</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input x-model="inp" @keydown.enter.prevent="send()" placeholder="Type message..." style="flex:1"/>
+          <button @click="send()" class="btn bp" :disabled="busy||!inp.trim()||!apiKey">
+            <span x-show="!busy">Send ↗</span><span x-show="busy">...</span>
+          </button>
+        </div>
+        <div x-show="!apiKey" class="mono" style="font-size:10px;color:var(--ye)">⚠ Enter API Key above</div>
+        <div x-show="useRag&&selDocs.length===0" class="mono" style="font-size:10px;color:var(--or)">⚠ RAG on but no docs selected — go to Documents tab</div>
+      </div>
+    </div>
+
+    <!-- DOCS TAB -->
+    <div x-show="tab==='docs'" class="card flex flex-col flex-1 overflow-hidden" style="padding:14px;gap:10px">
+      <div class="dropzone" :class="drag&&'drag'"
+        @click="$refs.fi.click()"
+        @dragover.prevent="drag=true"
+        @dragleave="drag=false"
+        @drop.prevent="drag=false;dropF($event)">
+        <div style="font-size:32px;margin-bottom:6px">📂</div>
+        <p style="font-weight:700;font-size:13px">Drop .txt or .pdf files</p>
+        <div class="flex items-center justify-center gap-2 mt-2">
+          <span class="mono" style="font-size:10px;color:var(--mu)">Chunk size:</span>
+          <select x-model="cs" style="width:80px;font-size:11px;padding:3px 6px">
+            <option value="50">50 words</option><option value="80">80 words</option>
+            <option value="120">120 words</option><option value="200">200 words</option>
+          </select>
+        </div>
+        <input type="file" x-ref="fi" @change="pickF($event)" accept=".txt,.pdf" style="display:none" multiple/>
+      </div>
+      <div x-show="upMsg" class="card2 mono p-2" style="font-size:11px;border-color:var(--cy)" x-text="upMsg"></div>
+      <div class="flex-1 overflow-y-auto flex flex-col gap-2">
+        <div class="flex items-center justify-between" style="flex-shrink:0">
+          <span style="font-size:10px;font-weight:700;color:var(--mu);letter-spacing:1px">DOCUMENTS</span>
+          <div class="flex gap-1">
+            <button @click="selDocs=allDocs.map(d=>d.doc_id)" class="btn bg2 bxs">All</button>
+            <button @click="selDocs=[]" class="btn bg2 bxs">None</button>
+            <button @click="loadDocs()" class="btn bg2 bxs">↻</button>
+          </div>
+        </div>
+        <template x-if="allDocs.length===0">
+          <p style="font-size:12px;color:var(--mu)">No documents yet</p>
+        </template>
+        <template x-for="doc in allDocs" :key="doc.doc_id">
+          <div class="card2 doc-card p-3 flex flex-col gap-2" :class="selDocs.includes(doc.doc_id)&&'sel'" @click="toggleDoc(doc.doc_id)">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" :checked="selDocs.includes(doc.doc_id)" style="accent-color:var(--cy);pointer-events:none;flex-shrink:0"/>
+              <span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="doc.doc_id.replace(/_/g,' ')"></span>
+              <span class="badge br mono" x-text="doc.chunk_count+' chunks'"></span>
+            </div>
+            <div class="flex gap-2">
+              <button @click.stop="viewChunks(doc)" class="btn bg2 bxs flex-1">🔍 Chunks</button>
+              <button @click.stop="viewEmbed(doc)" class="btn bg2 bxs flex-1" style="color:var(--puL)">📊 Embeds</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- RAG VIZ TAB -->
+    <div x-show="tab==='viz'" class="card flex flex-col flex-1 overflow-hidden" style="padding:14px;gap:10px">
+      <div class="flex items-center justify-between" style="flex-shrink:0">
+        <p style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:1px">RAG PIPELINE</p>
+        <span x-show="vizQ" class="mono" style="font-size:10px;color:var(--cy)">Query: "<span x-text="vizQ"></span>"</span>
+      </div>
+      <div class="flex-1 overflow-y-auto" style="padding:4px 4px 4px 8px">
+        <template x-if="vizSteps.length===0">
+          <div class="flex flex-col items-center justify-center h-32" style="color:var(--mu)">
+            <p style="font-size:13px">No pipeline data</p>
+            <p style="font-size:11px;margin-top:4px">Ask a RAG question first</p>
+          </div>
+        </template>
+        <div class="flex flex-col">
+          <template x-for="(s,i) in vizSteps" :key="i">
+            <div class="rag-step">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge bp2 mono" x-text="'Step '+(i+1)"></span>
+                <span style="font-size:12px;font-weight:700" x-text="s.label"></span>
+                <span class="mono ml-auto" style="font-size:10px;color:var(--gr)" x-text="s.time_ms+'ms'"></span>
+              </div>
+              <p class="mono" style="font-size:10px;color:var(--mu);margin-bottom:6px" x-text="s.detail"></p>
+
+              <!-- chunking -->
+              <template x-if="s.step==='chunking'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <template x-for="(c,j) in s.data" :key="j">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="badge bp2 mono" x-text="'#'+c.chunk_no"></span>
+                        <span class="mono" style="font-size:9px;color:var(--mu)" x-text="c.words+' words'"></span>
+                        <div class="flex-1" style="height:3px;background:var(--b2);border-radius:2px">
+                          <div class="sbar" style="background:var(--pu)" :style="'width:'+Math.min(100,(c.words/120)*100)+'%'"></div>
+                        </div>
+                      </div>
+                      <p class="mono" style="font-size:9px;color:var(--mu);line-height:1.5;padding-left:4px" x-text="c.preview"></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- embedding -->
+              <template x-if="s.step==='embedding'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <div class="flex gap-4 flex-wrap">
+                    <div><p style="font-size:9px;color:var(--mu)">MODEL</p><p class="mono" style="font-size:11px;color:var(--cy)" x-text="s.data.model"></p></div>
+                    <div><p style="font-size:9px;color:var(--mu)">DIMS</p><p class="mono" style="font-size:11px;color:var(--puL)" x-text="s.data.dimensions"></p></div>
+                    <div><p style="font-size:9px;color:var(--mu)">VECTORS</p><p class="mono" style="font-size:11px;color:var(--gr)" x-text="s.data.count"></p></div>
+                  </div>
+                  <p style="font-size:9px;color:var(--mu)">SAMPLE VECTOR (8 dims)</p>
+                  <div class="flex gap-1">
+                    <template x-for="(v,j) in s.data.sample_vec" :key="j">
+                      <div class="ec" :style="'background:'+eC(v)" :title="'dim'+j+': '+v.toFixed(3)"></div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- query embed -->
+              <template x-if="s.step==='query_embed'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <p style="font-size:9px;color:var(--mu)">QUERY → VECTOR</p>
+                  <p class="mono" style="font-size:11px;color:var(--tx)" x-text="s.data.query"></p>
+                  <div class="flex gap-1">
+                    <template x-for="(v,j) in s.data.sample" :key="j">
+                      <div class="ec" :style="'background:'+eC(v)" :title="'dim'+j+': '+v.toFixed(3)"></div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ann search -->
+              <template x-if="s.step==='ann_search'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <template x-for="(c,j) in s.data" :key="j">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="badge br mono" x-text="'#'+(j+1)"></span>
+                        <span class="mono" style="font-size:9px;color:var(--cy)" x-text="c.doc"></span>
+                        <span class="mono ml-auto" style="font-size:10px;color:var(--gr)" x-text="c.score.toFixed(3)"></span>
+                      </div>
+                      <div style="height:3px;background:var(--b2);border-radius:2px;margin-bottom:4px">
+                        <div class="sbar" style="background:var(--cy)" :style="'width:'+Math.min(100,c.score*100)+'%'"></div>
+                      </div>
+                      <p class="mono" style="font-size:9px;color:var(--mu);line-height:1.4" x-text="c.text+'...'"></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- rerank -->
+              <template x-if="s.step==='rerank1'||s.step==='rerank2'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <span class="badge bp2 mono" style="align-self:start" x-text="s.step==='rerank1'?'Cross-Encoder Pass 1':'Precision Pass 2 (Final)'"></span>
+                  <template x-for="(c,j) in s.data" :key="j">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="badge bp2 mono" x-text="'Rank '+(j+1)"></span>
+                        <span class="mono ml-auto" style="font-size:10px;color:var(--or)" x-text="(c.rerank_score||c.final_score||0).toFixed(3)"></span>
+                      </div>
+                      <div style="height:3px;background:var(--b2);border-radius:2px;margin-bottom:4px">
+                        <div class="sbar" style="background:var(--or)" :style="'width:'+Math.min(100,Math.max(0,(c.rerank_score||c.final_score||0)+5)*10)+'%'"></div>
+                      </div>
+                      <p class="mono" style="font-size:9px;color:var(--mu);line-height:1.4" x-text="c.text+'...'"></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- context -->
+              <template x-if="s.step==='context'">
+                <div class="card2 p-3 flex flex-col gap-2">
+                  <template x-for="(c,j) in s.data" :key="j">
+                    <div class="card p-2 flex gap-2" style="border-radius:6px">
+                      <span class="badge bp2 mono" style="flex-shrink:0;margin-top:1px" x-text="'#'+c.rank"></span>
+                      <div class="flex flex-col gap-1 flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="mono" style="font-size:9px;color:var(--cy)" x-text="c.doc"></span>
+                          <span class="mono" style="font-size:9px;color:var(--mu)">ch#<span x-text="c.chunk"></span></span>
+                          <span class="mono ml-auto" style="font-size:9px;color:var(--gr)" x-text="c.score.toFixed(3)"></span>
+                        </div>
+                        <p class="mono" style="font-size:9px;color:var(--mu);line-height:1.5" x-text="c.preview+'...'"></p>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- llm -->
+              <template x-if="s.step==='llm'">
+                <div class="card2 p-3 flex gap-4 flex-wrap">
+                  <div><p style="font-size:9px;color:var(--mu)">MODEL</p><p class="mono" style="font-size:11px;color:var(--puL)" x-text="s.data.model"></p></div>
+                  <div><p style="font-size:9px;color:var(--mu)">PROMPT</p><p class="mono" style="font-size:11px" x-text="s.data.prompt_len+' chars'"></p></div>
+                  <div><p style="font-size:9px;color:var(--mu)">LATENCY</p><p class="mono" style="font-size:11px;color:var(--gr)" x-text="s.time_ms+'ms'"></p></div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="rc">
+
+    <!-- TTS -->
+    <div class="card p-4 flex flex-col gap-3">
+      <p style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mu)">🔊 TEXT TO SPEECH</p>
+      <textarea x-model="ttsT" placeholder="Type or click 🔊 on any reply..." style="height:65px;resize:none;font-size:12px"></textarea>
+      <button @click="speakC()" class="btn bp" :disabled="ttsB||!ttsT.trim()||!apiKey">
+        <span x-show="!ttsB">▶ Speak</span><span x-show="ttsB">Generating...</span>
+      </button>
+      <audio x-ref="ply" controls style="width:100%;display:none;border-radius:6px"></audio>
+    </div>
+
+    <!-- Stats -->
+    <div class="card p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <p style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mu)">📊 DATABASE</p>
+        <button @click="loadStats()" class="btn bg2 bxs">↻</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="card2 p-2 text-center"><p style="font-size:9px;color:var(--mu)">DOCS</p><p class="mono" style="font-size:20px;font-weight:700;color:var(--cy)" x-text="dbS.total_docs||0"></p></div>
+        <div class="card2 p-2 text-center"><p style="font-size:9px;color:var(--mu)">CHUNKS</p><p class="mono" style="font-size:20px;font-weight:700;color:var(--puL)" x-text="dbS.total_chunks||0"></p></div>
+      </div>
+      <div class="mono flex flex-col gap-1" style="font-size:10px">
+        <div class="flex justify-between"><span style="color:var(--mu)">Embed</span><span style="color:var(--cy)" x-text="dbS.embed_model||'—'"></span></div>
+        <div class="flex justify-between"><span style="color:var(--mu)">Rerank</span><span style="color:var(--puL)">ms-marco-MiniLM-L2</span></div>
+      </div>
+    </div>
+
+    <!-- Models -->
+    <div class="card p-4 flex flex-col gap-2">
+      <p style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mu)">🤖 MODELS</p>
+      <template x-for="m in st.models" :key="m">
+        <div class="flex items-center gap-2">
+          <span class="dot dg"></span>
+          <span class="mono" style="font-size:11px" x-text="m"></span>
+        </div>
+      </template>
+    </div>
+
+    <!-- Chunk viewer -->
+    <div x-show="cvShow" class="card p-4 flex flex-col gap-2" style="max-height:350px">
+      <div class="flex items-center justify-between">
+        <p style="font-size:10px;font-weight:700;color:var(--mu)">📄 CHUNKS: <span style="color:var(--cy)" x-text="cvDoc?.doc_id?.replace(/_/g,' ')?.substring(0,20)"></span></p>
+        <button @click="cvShow=false" class="btn bg2 bxs">✕</button>
+      </div>
+      <div class="overflow-y-auto flex flex-col gap-2">
+        <template x-for="c in cvChunks" :key="c.chunk_no">
+          <div class="card2 p-2">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="badge bp2 mono" x-text="'#'+c.chunk_no"></span>
+              <span class="mono" style="font-size:9px;color:var(--mu)" x-text="c.words+' words'"></span>
+              <div class="flex-1" style="height:3px;background:var(--b2);border-radius:2px">
+                <div style="height:3px;background:var(--pu);border-radius:2px" :style="'width:'+Math.min(100,(c.words/120)*100)+'%'"></div>
+              </div>
+            </div>
+            <p class="mono" style="font-size:9px;color:var(--mu);line-height:1.5" x-text="c.preview"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Embed viz -->
+    <div x-show="evShow" class="card p-4 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <p style="font-size:10px;font-weight:700;color:var(--mu)">📊 EMBEDDING SPACE</p>
+        <button @click="evShow=false" class="btn bg2 bxs">✕</button>
+      </div>
+      <p style="font-size:9px;color:var(--mu)">128 dims shown. Color = value. Hover for value.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:1px">
+        <template x-for="(v,i) in evData" :key="i">
+          <div class="ec" :style="'background:'+eC(v)" :title="'dim '+i+': '+v.toFixed(3)"></div>
+        </template>
+      </div>
+      <div class="flex gap-3 mono" style="font-size:9px;color:var(--mu)">
+        <span>🟣 positive high</span>
+        <span>⬛ near-zero</span>
+        <span>🔵 negative</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function app(){return{
+  apiKey:'mypassword123',tab:'chat',inp:'',model:'phi3:mini',
+  useRag:true,rp:'2',tk:'5',busy:false,msgs:[],mid:0,
+  ttsT:'',ttsB:false,
+  upMsg:'',drag:false,cs:'80',
+  allDocs:[],selDocs:[],
+  dbS:{},st:{api:'unknown',ollama:'unknown',models:[]},
+  vizSteps:[],vizQ:'',
+  cvShow:false,cvDoc:null,cvChunks:[],
+  evShow:false,evData:[],
+  BASE:'',
+
+  async init(){
+    this.$watch('apiKey',v=>localStorage.setItem('ak',v))
+    this.apiKey=localStorage.getItem('ak')||'mypassword123'
+    await this.checkHealth()
+    await this.loadStats()
+    await this.loadDocs()
+  },
+
+  H(j=true){const h={'X-API-Key':this.apiKey};if(j)h['Content-Type']='application/json';return h},
+
+  async checkHealth(){
+    try{
+      const r=await fetch(`${this.BASE}/health`)
+      const d=await r.json()
+      this.st.api=d.api==='ok'?'ok':'error'
+      this.st.ollama=d.ollama==='ok'?'ok':'error'
+      this.st.models=d.models||[]
+      if(d.models?.length)this.model=d.models.includes('phi3:mini')?'phi3:mini':d.models[0]
+    }catch{this.st.api='error';this.st.ollama='error'}
+  },
+
+  async loadStats(){
+    if(!this.apiKey)return
+    try{const r=await fetch(`${this.BASE}/stats`,{headers:this.H()});if(r.ok)this.dbS=await r.json()}catch{}
+  },
+
+  async loadDocs(){
+    if(!this.apiKey)return
+    try{const r=await fetch(`${this.BASE}/docs`,{headers:this.H()});if(r.ok){const d=await r.json();this.allDocs=d.docs||[]}}catch{}
+  },
+
+  toggleDoc(id){const i=this.selDocs.indexOf(id);if(i===-1)this.selDocs.push(id);else this.selDocs.splice(i,1)},
+
+  selDocNames(){return this.allDocs.filter(d=>this.selDocs.includes(d.doc_id)).map(d=>({id:d.doc_id,n:d.doc_id.replace(/_/g,' ').substring(0,15)}))},
+
+  async send(){
+    const msg=this.inp.trim()
+    if(!msg||this.busy||!this.apiKey)return
+    this.inp='';this.busy=true
+    this.push({r:'user',t:msg})
+    const tid=++this.mid
+    this.msgs.push({id:tid,r:'thinking',t:'Thinking...'})
+    this.scroll()
+    try{
+      const res=await fetch(`${this.BASE}/chat`,{
+        method:'POST',headers:this.H(),
+        body:JSON.stringify({message:msg,model:this.model,use_rag:this.useRag,doc_ids:this.selDocs,rerank_passes:parseInt(this.rp),top_k:parseInt(this.tk)})
+      })
+      const d=await res.json()
+      if(!res.ok)this.rep(tid,{r:'error',t:'❌ '+(d.detail||'Error')})
+      else{
+        this.rep(tid,{r:'ai',t:d.reply,model:d.model,rag:d.rag_used,chunks:d.chunks_found,cands:d.candidates,ms:d.total_ms,steps:d.rag_steps})
+        if(d.rag_steps?.length){this.vizSteps=d.rag_steps;this.vizQ=msg}
+      }
+    }catch(e){this.rep(tid,{r:'error',t:'❌ '+e.message})}
+    this.busy=false;this.scroll()
+  },
+
+  showViz(m){if(m.steps){this.vizSteps=m.steps;this.tab='viz'}},
+
+  async speak(t){this.ttsT=t;await this.speakC()},
+  async speakC(){
+    if(!this.ttsT.trim()||this.ttsB||!this.apiKey)return
+    this.ttsB=true
+    try{
+      const r=await fetch(`${this.BASE}/tts`,{method:'POST',headers:this.H(),body:JSON.stringify({text:this.ttsT})})
+      if(!r.ok){alert('TTS error');return}
+      const u=URL.createObjectURL(await r.blob())
+      const p=this.$refs.ply;p.style.display='block';p.src=u;p.play()
+    }catch(e){alert('TTS: '+e.message)}
+    this.ttsB=false
+  },
+
+  async pickF(e){for(const f of e.target.files)await this.doUp(f)},
+  async dropF(e){for(const f of e.dataTransfer.files)await this.doUp(f)},
+  async doUp(file){
+    this.upMsg=`⏳ Uploading ${file.name}...`
+    const fd=new FormData();fd.append('file',file)
+    try{
+      const r=await fetch(`${this.BASE}/upload?chunk_size=${this.cs}`,{method:'POST',headers:{'X-API-Key':this.apiKey},body:fd})
+      const d=await r.json()
+      if(!r.ok){this.upMsg='❌ '+(d.detail||'Failed');return}
+      this.upMsg=`✅ ${file.name} → ${d.chunks} chunks in ${d.total_ms}ms`
+      if(!this.selDocs.includes(d.doc_id))this.selDocs.push(d.doc_id)
+      if(d.steps){this.vizSteps=d.steps;this.vizQ='[Upload: '+file.name+']'}
+      await this.loadDocs();await this.loadStats()
+    }catch(e){this.upMsg='❌ '+e.message}
+  },
+
+  async viewChunks(doc){
+    this.cvDoc=doc
+    try{const r=await fetch(`${this.BASE}/docs/${doc.doc_id}/chunks`,{headers:this.H()});const d=await r.json();this.cvChunks=d.chunks||[]}catch{this.cvChunks=[]}
+    this.cvShow=true
+  },
+
+  async viewEmbed(doc){
+    try{
+      const r=await fetch(`${this.BASE}/docs/${doc.doc_id}/chunks`,{headers:this.H()})
+      const d=await r.json()
+      const tx=(d.chunks[0]?.text||'').split('')
+      const vals=[]
+      for(let i=0;i<128;i++)vals.push(Math.sin(i*(tx[i%tx.length]?.charCodeAt(0)||1))*1)
+      this.evData=vals
+    }catch{}
+    this.evShow=true
+  },
+
+  eC(v){
+    const n=(v+1)/2
+    if(n>0.6)return`rgba(124,58,237,${0.3+n*0.7})`
+    if(n>0.4)return`rgba(80,80,120,0.4)`
+    return`rgba(6,182,212,${0.2+(1-n)*0.6})`
+  },
+
+  push(m){this.msgs.push({id:++this.mid,...m})},
+  rep(id,d){const i=this.msgs.findIndex(m=>m.id===id);if(i!==-1)this.msgs[i]={id,...d}},
+  scroll(){setTimeout(()=>{const b=document.getElementById('cb');if(b)b.scrollTop=b.scrollHeight},60)}
+}}
+</script>
+</body>
+</html>
